@@ -4,17 +4,19 @@ Shorthand command to send entry and exit mail to laboratori@dei.unipd.it
 ## Installation
 To install the script to path:
 `sudo ./install.sh`
+
 To clean the installation run:
 `sudo ./install.sh clean`
 
 ## Usage
 
-When entering or leaving one of the offices of one of the DEI building, 
+When entering or leaving one of the offices of one of the DEI buildings, 
 run the following command to send an automatic message to laboratori@dei with the current time stamp:
 `mail_laboratori [options] <in| out>`
 where:
 * `in`: Send entry mail with current configuration
 * `out`: Send exit mail with current configuration
+
 Options:
 * `-t TIME`: Specify entry/exit time
 
