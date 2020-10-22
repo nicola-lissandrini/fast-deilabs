@@ -36,6 +36,7 @@ and current office name by running the command with options:
 ## Troubleshoots
 
 * Packets needed: libio-socket-ssl-perl libnet-ssleay-perl perl sendemail
-* You need to enable 'less secure apps' at https://myaccount.google.com/lesssecureapps
+* If you have two factor authentication (2FA) enabled you need to generate a specific password
+from your Google account to be used uniquely for mail_laboratory. See https://support.google.com/accounts/answer/185833?hl=en for further information.
 
 Please open an issue on github if you find any problem.
