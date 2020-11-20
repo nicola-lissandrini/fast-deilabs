@@ -1,7 +1,7 @@
 #!/bin/bash
 
 install_dir="/usr/local/bin"
-exec_name="mail_laboratori"
+exec_name="fast_deilabs"
 script_name="$exec_name.sh"
 
 if [ "$EUID" -ne 0 ];  then
