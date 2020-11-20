@@ -33,11 +33,6 @@ function usage {
 	echo "  Register entry/exit:"
 	echo "  	in  		Register entry with current configuration"
 	echo "  	out 		Register exit with current configuration"
-	echo
-	echo
-	echo "Troubleshoot:"
-	echo "  * Packets needed: libio-socket-ssl-perl libnet-ssleay-perl perl sendemail"
-	echo "  * You need to enable 'less secure apps' at https://myaccount.google.com/lesssecureapps"
 	exit
 }
 
