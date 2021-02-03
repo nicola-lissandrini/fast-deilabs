@@ -151,7 +151,6 @@ function exit_lab {
 						   --save-cookies ${cookies_file} \
 						   --post-data "_token=${token}&_method=PUT" \
 						   -O - "$exit_url" 2> /dev/null)
-	echo "$enter_lab_result" > bubu
 	if ! [[ -z $(echo "$exit_lab_result" | grep "OK") ]]; then
 		echo "Successfully exited"
 	else
