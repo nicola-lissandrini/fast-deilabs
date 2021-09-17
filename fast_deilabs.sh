@@ -69,7 +69,7 @@ function get_token {
 					 --save-cookies ${cookies_file} \
 		 			 --keep-session-cookies \
 		 			 --auth-no-challenge --debug \
-		 			 -O - "$login_page" 2> tokenpage) # /dev/null)
+		 			 -O - "$login_page" 2> /dev/null)
 
 	token=$(echo "$tokenpage" | grep _token | sed -n 's/.*value="\(.*\)".*/\1/p')
 	echo $token
@@ -80,14 +80,13 @@ function do_login {
 	email=$2
 	password=$3
 
-	echo $token > iltokenchemiarriva
 	login_result=$(wget  --user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0" \
 				    --load-cookies ${cookies_file} \
 						--keep-session-cookies \
 						--save-cookies ${cookies_file} \
 		 			  --auth-no-challenge \
 						--post-data "_token=${token}&email=${email}&password=${password}&remember=0" \
-						-O - "$login_page" -S 2> ./tempreslogin) # /dev/null)
+						-O - "$login_page" -S 2> /dev/null)
 
 	if ! [[ -z $(echo "$login_result" | grep "Login") ]]; then
 		echo "Failed login"
@@ -102,12 +101,12 @@ function find_lab {
 						 --keep-session-cookies \
 						 --save-cookies ${cookies_file} \
 						 -O - "$lab_in_out_page" 2> /dev/null)
-	echo "$lab_list_result" > ./lab_list_result
+
 	# Check not already entered
 	if ! [[ -z $(echo "$lab_list_result" | grep "Exit from") ]]; then
 		entered_lab=$(echo "$lab_list_result" | grep "Exit from" | sed -n 's/.*Exit from \(.*\)".*/\1/p')
 		echo "Already entered $entered_lab. Aborting"
-		exit -1
+		exit 0
 	fi
 
 	lab_ids=$(echo "$lab_list_result" | get_labs)
@@ -142,7 +141,7 @@ function enter_lab {
 		echo "Successfully entered lab $lab"
 	else
 		echo "Failed entering. Unexpected error occurred"
-		exit
+		exit -6
 	fi
 	# Store lab exit URL
 	echo "$enter_lab_result" | grep -B 1 "edit_laboratory_in_outs_form" | paste - - | sed -n 's/.*action="\([^"]*\)".*/\1/p' > ${exit_file}
@@ -178,29 +177,33 @@ function lab_in {
 
 	# Get session token
 	token=$(get_token)
-	if [[ $? -ne 0 ]]; then
-		echo "$token"
-		exit $?
+	error=$?
+	if [[ $error -ne 0 ]]; then
+		exit $error
 	fi
 
 	# Do login
 	do_login "$token" "$email" "$password"
-	if [[ $? -ne 0 ]]; then
-		exit $?
+	error=$?
+	if [[ $error -ne 0 ]]; then
+		exit $error
 	fi
 
 	# Find lab 
 
 	lab_id=$(find_lab "$token" "$lab")
-	if [[ $? -ne 0 ]]; then
+	error=$?
+	if [[ $error -ne 0 ]]; then
 		echo $lab_id
-		exit $?
+		exit $error
 	fi
 
 	# Enter lab
-	enter_lab "$token" $lab_id
-	if [[ $? -ne 0 ]]; then
-		exit $?
+	lab_result=$(enter_lab "$token" $lab_id)
+	error=$?
+	if [[ $error -ne 0 ]]; then
+		echo $lab_result
+		exit $error
 	fi
 }
 
@@ -211,21 +214,23 @@ function lab_out {
 
 	# Get session token
 	token=$(get_token)
-	if [[ $? -ne 0 ]]; then
-		echo "$token"
-		exit $?
+	error=$?
+	if [[ $error -ne 0 ]]; then
+		exit $error
 	fi
 
 	# Do login
 	do_login "$token" "$email" "$password"
-	if [[ $? -ne 0 ]]; then
-		exit $?
+	error=$?
+	if [[ $error -ne 0 ]]; then
+		exit $error
 	fi
 
 	# Exit lab
 	exit_lab "$token"
-	if [[ $? -ne 0 ]]; then
-		exit $?
+	error=$?
+	if [[ $error -ne 0 ]]; then
+		exit $error
 	fi
 }
 
@@ -322,9 +327,11 @@ fi
 case $arg in
 	in)
 		lab_in "$config_name" "$config_psw" "$config_lab"
+		exit $?
 		;;
 	out)
 		lab_out "$config_name" "$config_psw" "$config_lab"
+		exit $?
 		;;
 	*)
 		echo "Invalid argument $arg"
