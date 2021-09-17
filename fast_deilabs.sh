@@ -33,11 +33,6 @@ function usage {
 	echo "  Register entry/exit:"
 	echo "  	in  		Register entry with current configuration"
 	echo "  	out 		Register exit with current configuration"
-	echo
-	echo
-	echo "Troubleshoot:"
-	echo "  * Packets needed: libio-socket-ssl-perl libnet-ssleay-perl perl sendemail"
-	echo "  * You need to enable 'less secure apps' at https://myaccount.google.com/lesssecureapps"
 	exit
 }
 
@@ -62,7 +57,7 @@ function get_username {
 }
 
 function get_labs {
-	grep -A 2 "<option" < /dev/stdin |\
+	egrep -A 2 "<option value=\"[0-9]+\"" < /dev/stdin |\
 	 paste - - - |\
 	 sed -n 's/[ ]//p' |\
 	 sed -n 's/.*<option value="\([0-9]*\)".*>\s*\(.*\)*\s*<\/option>.*/\1 "\2/p' |\
@@ -70,9 +65,11 @@ function get_labs {
 }
 
 function get_token {
-	tokenpage=$(wget --save-cookies ${cookies_file} \
+	tokenpage=$(wget --user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0" \
+					 --save-cookies ${cookies_file} \
 		 			 --keep-session-cookies \
-		 			 -O - "$login_page" 2> /dev/null)
+		 			 --auth-no-challenge --debug \
+		 			 -O - "$login_page" 2> tokenpage) # /dev/null)
 
 	token=$(echo "$tokenpage" | grep _token | sed -n 's/.*value="\(.*\)".*/\1/p')
 	echo $token
@@ -82,11 +79,20 @@ function do_login {
 	token=$1
 	email=$2
 	password=$3
-	login_result=$(wget --load-cookies ${cookies_file} \
+
+	echo $token > iltokenchemiarriva
+	login_result=$(wget  --user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0" \
+				    --load-cookies ${cookies_file} \
 						--keep-session-cookies \
 						--save-cookies ${cookies_file} \
-						--post-data "_token=${token}&email=${email}&password=${password}" \
-						-O - "$login_page" 2> /dev/null)
+		 			  --auth-no-challenge \
+						--post-data "_token=${token}&email=${email}&password=${password}&remember=0" \
+						-O - "$login_page" -S 2> ./tempreslogin) # /dev/null)
+
+	if ! [[ -z $(echo "$login_result" | grep "Login") ]]; then
+		echo "Failed login"
+		exit -1
+	fi
 }
 
 function find_lab {
@@ -96,7 +102,7 @@ function find_lab {
 						 --keep-session-cookies \
 						 --save-cookies ${cookies_file} \
 						 -O - "$lab_in_out_page" 2> /dev/null)
-
+	echo "$lab_list_result" > ./lab_list_result
 	# Check not already entered
 	if ! [[ -z $(echo "$lab_list_result" | grep "Exit from") ]]; then
 		entered_lab=$(echo "$lab_list_result" | grep "Exit from" | sed -n 's/.*Exit from \(.*\)".*/\1/p')
@@ -112,11 +118,11 @@ function find_lab {
 	# Check if found exactly one
 	if [[ -z "$found_lab" ]]; then
 		echo "No laboratory matches the supplied label. Aborting"
-		exit -1
+		exit -2
 	fi
 	if [[ $(echo "$found_lab" | wc -l)  -gt 1 ]]; then
 		echo "Multiple laboratories match the supplied label. Aborting"
-		exit -1
+		exit -3
 	fi
 
 	found_lab_id=$(echo "$found_lab" | sed -n 's/\(.*\) ".*"/\1/p')
@@ -161,7 +167,7 @@ function exit_lab {
 		echo "Successfully exited"
 	else
 		echo "Failed exiting. Unexpected error occurred"
-		exit
+		exit -4
 	fi
 }
 
@@ -222,6 +228,9 @@ function lab_out {
 		exit $?
 	fi
 }
+
+
+
 # Check for existing configuration
 configured=false
 configuring=false
@@ -303,6 +312,12 @@ if ! $configured; then
 	exit
 fi
 arg=$1
+
+if [ -z "$config_psw" ]; then
+	echo -n "Password for $config_name: "
+	read -s config_psw
+fi
+
 
 case $arg in
 	in)
